@@ -1,4 +1,4 @@
-from classifier import LetterClassifier
+from classify import LetterClassifier
 from rag.engine import RAGEngine
 
 def analyze(content: str) -> dict:

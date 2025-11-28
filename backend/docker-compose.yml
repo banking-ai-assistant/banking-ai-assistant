@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  migrate:
+    image: migrate/migrate
+    container_name: migrate
+    depends_on:
+      - postgres
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      echo 'Waiting 10s for Postgres...' &&
+      sleep 10 &&
+      migrate -path /migrations -database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable up
+
+  go-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-service
+    restart: on-failure
+    env_file: .env
+    environment:
+      DATABASE_DSN: ${DATABASE_DSN}
+      AI_URL: ${AI_URL}
+      PORT: ${PORT}
+    ports:
+      - "8081:${PORT}"
+    depends_on:
+      - postgres
+      - migrate
+      - ai-service
+
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: always
+    # env_file: .env
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:

@@ -1,3 +1,4 @@
+from typing import Dict, List
 class SemanticSearch:
     def find_best_templates(self, letter_type: str, keywords: List[str], tone: str) -> List[Dict]:
         templates = self.template_loader.get_templates_by_type(letter_type)

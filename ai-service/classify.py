@@ -122,29 +122,15 @@ class LetterClassifier:
             if urgency_match2:
                 result["urgency"] = urgency_match2.group(1)
         
-        tone_pattern = r'"tone"\s*:\s*"([^"]+)"'
-        tone_match = re.search(tone_pattern, text)
-        if tone_match:
-            result["tone"] = tone_match.group(1)
-        else:
-            tone_pattern2 = r'tone\s*:\s*(\w+)'
-            tone_match2 = re.search(tone_pattern2, text)
-            if tone_match2:
-                result["tone"] = tone_match2.group(1)
-        
-        summary_pattern = r'"summary"\s*:\s*"([^"]+)"'
-        summary_match = re.search(summary_pattern, text)
-        if summary_match:
-            result["summary"] = summary_match.group(1)
-        
-        keywords_pattern = r'"keywords"\s*:\s*\[([^\]]+)\]'
-        keywords_match = re.search(keywords_pattern, text)
-        if keywords_match:
-            keywords_str = keywords_match.group(1)
-            keywords = re.findall(r'"([^"]+)"', keywords_str)
-            result["keywords"] = keywords
-        
-        return result
+        result = self._parse_json_response(response.output_text)
+
+        return {
+            "type": result.get("type", "information_request"),
+            "urgency": result.get("urgency", "medium"),
+            "tone": result.get("tone", "neutral"),
+            "summary": result.get("summary", "Письмо требует обработки"),
+            "keywords": result.get("keywords", ["обработка"])
+        }
     
     def _smart_rule_based_classify(self, text: str) -> dict:
         simple_result = self._simple_rules_classify(text)
@@ -241,3 +227,13 @@ class LetterClassifier:
             "summary": summary_map.get(letter_type, 'Письмо требует обработки'),
             "keywords": keywords_map.get(letter_type, ['обработка'])
         }
+    
+    def _parse_json_response(self, text: str) -> dict:
+        try:
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return {}
+        except Exception as e:
+            print(f"Ошибка парсинга JSON: {e}")
+            return {}
