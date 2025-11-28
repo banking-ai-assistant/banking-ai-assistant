@@ -45,7 +45,7 @@ class LetterClassifier:
         )
         
         result = self._parse_json_response(response.output_text)
-        
+
         return {
             "type": result.get("type", "information_request"),
             "urgency": result.get("urgency", "medium"),
@@ -151,16 +151,11 @@ class LetterClassifier:
         }
     
     def _parse_json_response(self, text: str) -> dict:
-        """Парсит JSON из ответа LLM"""
         try:
-            cleaned = text.strip()
-            if cleaned.startswith('```json'):
-                cleaned = cleaned[7:]
-            if cleaned.endswith('```'):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
-            
-            return json.loads(cleaned)
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return {}
         except Exception as e:
             print(f"Ошибка парсинга JSON: {e}")
             return {}

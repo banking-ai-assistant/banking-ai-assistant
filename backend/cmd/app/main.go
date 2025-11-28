@@ -42,7 +42,8 @@ func main() {
 	}
 
 	repos := db.NewRepositories(dbConn)
-	aiClient := ai.NewStubClient()
+	// aiClient := ai.NewStubClient()
+	aiClient := ai.NewHTTPClient(utils.MustEnv("AI_URL", "http://service-ai:8000"))
 	notifier := tickets.NewStubNotifier(appLog)
 
 	service := tickets.NewService(repos.Tickets, aiClient, notifier, appLog)

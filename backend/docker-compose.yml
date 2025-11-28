@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:15
@@ -44,6 +42,17 @@ services:
     depends_on:
       - postgres
       - migrate
+      - ai-service
+
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    restart: always
+    # env_file: .env
+    ports:
+      - "8000:8000"
 
 volumes:
   postgres_data:
