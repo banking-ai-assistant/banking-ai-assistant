@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ИИ-ассистент для деловой переписки | Банк</title>
+  <style>
+    :root {
+      --primary: #1a56db;
+      --primary-light: #dbeafe;
+      --danger: #e11d48;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --white: #fff;
+      --border: #d1d5db;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--gray-800);
+      background-color: #fafafa;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    header {
+      background: var(--white);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 1.5rem;
+    }
+
+    .panel {
+      background: var(--white);
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 0.75rem 1rem;
+      background: var(--gray-100);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-body {
+      padding: 1rem;
+    }
+
+    /* Входящие письма */
+    .letter-list {
+      list-style: none;
+    }
+
+    .letter-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--gray-200);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .letter-item:hover {
+      background: var(--gray-100);
+    }
+
+    .letter-item:last-child {
+      border-bottom: none;
+    }
+
+    .letter-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .letter-sender {
+      font-weight: 600;
+    }
+
+    .letter-subject {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .letter-preview {
+      color: var(--gray-600);
+      font-size: 0.875rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge--regulatory { background: #fef3c7; color: #92400e; }
+    .badge--complaint  { background: #fee2e2; color: #b91c1c; }
+    .badge--info       { background: #e0f2fe; color: #0891b2; }
+    .badge--partner    { background: #e0e7ff; color: #4338ca; }
+
+    .sla {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+    }
+    .sla--high   { background: #fee2e2; color: #b91c1c; }
+    .sla--medium { background: #fef9c3; color: #92400e; }
+    .sla--low    { background: #dcfce7; color: #166534; }
+
+    /* Редактор */
+    .editor-controls {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .style-btn {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      background: var(--white);
+      cursor: pointer;
+    }
+
+    .style-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn--primary   { background: var(--primary); color: white; }
+    .btn--secondary { background: var(--gray-200); color: var(--gray-800); }
+    .btn--warning   { background: var(--warning); color: white; }
+    .btn--danger    { background: var(--danger); color: white; }
+
+    /* Согласование */
+    .approval-steps {
+      padding-left: 1.5rem;
+    }
+
+    .approval-step {
+      position: relative;
+      padding: 0.75rem 0 0.75rem 1.5rem;
+      border-left: 2px solid var(--gray-400);
+    }
+
+    .approval-step::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--gray-400);
+    }
+
+    .approval-step.done::before {
+      background: var(--success);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px var(--success);
+    }
+
+    .approval-step.active::before {
+      background: var(--primary);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+
+    .approval-step.waiting::before {
+      background: white;
+      border: 2px solid var(--gray-400);
+    }
+
+    .step-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .step-status {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    .step-comment {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      padding: 0.5rem;
+      background: var(--gray-100);
+      border-radius: 0.375rem;
+    }
+
+    /* Дашборд и уведомления (сжато) */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .metric-label {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    .alerts {
+      list-style: none;
+    }
+
+    .alert-item {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--gray-200);
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .alert-icon {
+      flex: 0 0 20px;
+      text-align: center;
+    }
+
+    /* Адаптив */
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="logo">🏦 ИИ-ассистент «Корреспондент»</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="dashboard">
+      <!-- Левая панель: входящие + дашборд + алерты -->
+      <div>
+        <section class="panel">
+          <div class="panel-header">📥 Входящие (5)</div>
+          <div class="panel-body">
+            <ul class="letter-list">
+              <li class="letter-item">
+                <div class="letter-meta">
+                  <span class="letter-sender">ЦБ РФ</span>
+                  <span class="badge badge--regulatory">Регуляторный</span>
+                </div>
+                <div class="letter-subject">Запрос по отчёту №ЦБ-2025-112</div>
+                <div class="letter-preview">В соответствии с п. 4.2 Указания №5834-У просим предоставить...</div>
+                <div class="letter-meta">
+                  <span>SLA: 24 ч</span>
+                  <span class="sla sla--high">КРИТИЧНО</span>
+                </div>
+              </li>
+              <li class="letter-item">
+                <div class="letter-meta">
+                  <span class="letter-sender">ООО «ТехноСфера»</span>
+                  <span class="badge badge--partner">Партнёрское</span>
+                </div>
+                <div class="letter-subject">Предложение о сотрудничестве по API</div>
+                <div class="letter-preview">Просим рассмотреть возможность интеграции наших решений...</div>
+                <div class="letter-meta">
+                  <span>SLA: 72 ч</span>
+                  <span class="sla sla--medium">СРЕДНЕ</span>
+                </div>
+              </li>
+              <li class="letter-item">
+                <div class="letter-meta">
+                  <span class="letter-sender">Иванов А.С.</span>
+                  <span class="badge badge--complaint">Жалоба</span>
+                </div>
+                <div class="letter-subject">Претензия по комиссии по договору №4567</div>
+                <div class="letter-preview">Считаю начисление комиссии необоснованным на основании...</div>
+                <div class="letter-meta">
+                  <span>SLA: 48 ч</span>
+                  <span class="sla sla--high">КРИТИЧНО</span>
+                </div>
+              </li>
+              <li class="letter-item">
+                <div class="letter-meta">
+                  <span class="letter-sender">Минфин РФ</span>
+                  <span class="badge badge--regulatory">Регуляторный</span>
+                </div>
+                <div class="letter-subject">Информационное письмо о налоговых изменениях</div>
+                <div class="letter-preview">Настоящим сообщаем о вступлении в силу с 01.01.2026...</div>
+                <div class="letter-meta">
+                  <span>SLA: 5 дн.</span>
+                  <span class="sla sla--low">НИЗКО</span>
+                </div>
+              </li>
+              <li class="letter-item">
+                <div class="letter-meta">
+                  <span class="letter-sender">АО «ЛогистикГрупп»</span>
+                  <span class="badge badge--info">Запрос</span>
+                </div>
+                <div class="letter-subject">Запрос выписки по счёту за Q3 2025</div>
+                <div class="letter-preview">Просим направить выписку за период с 01.07 по 30.09.2025...</div>
+                <div class="letter-meta">
+                  <span>SLA: 24 ч</span>
+                  <span class="sla sla--high">КРИТИЧНО</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">📊 Основные метрики</div>
+          <div class="panel-body">
+            <div class="metrics">
+              <div class="metric-card">
+                <div class="metric-value">84%</div>
+                <div class="metric-label">SLA соблюдено</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">2.1 ч</div>
+                <div class="metric-label">Ср. время ответа</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">12</div>
+                <div class="metric-label">На согласовании</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">3</div>
+                <div class="metric-label">⚠️ Просрочено</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">🔔 Уведомления (3)</div>
+          <div class="panel-body">
+            <ul class="alerts">
+              <li class="alert-item">
+                <span class="alert-icon">❗</span>
+                <div>
+                  <strong>Письмо от ЦБ РФ</strong> требует ответа до 15:00 сегодня.
+                </div>
+              </li>
+              <li class="alert-item">
+                <span class="alert-icon">🔄</span>
+                <div>
+                  <strong>Ответ для ООО «ТехноСфера»</strong> ожидает согласования в юр.отделе (18 ч).
+                </div>
+              </li>
+              <li class="alert-item">
+                <span class="alert-icon">✅</span>
+                <div>
+                  <strong>Претензия Иванова А.С.</strong> одобрена, можно отправлять.
+                </div>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- Правая панель: редактор + согласование -->
+      <div>
+        <section class="panel">
+          <div class="panel-header">
+            ✉️ Ответ на: <strong>Запрос по отчёту №ЦБ-2025-112</strong>
+          </div>
+          <div class="panel-body">
+            <div class="editor-controls">
+              <button class="style-btn active">Строгий официальный</button>
+              <button class="style-btn">Деловой корпоративный</button>
+              <button class="style-btn">Клиентоориентированный</button>
+              <button class="style-btn">Краткий информационный</button>
+            </div>
+
+            <textarea placeholder="ИИ-ассистент сгенерировал черновик...">Уважаемые сотрудники Центрального банка Российской Федерации!
+
+В соответствии с п. 4.2 Указания №5834-У от 12.06.2023 г., настоящим направляем запрошенный отчёт по операционным рискам за III квартал 2025 года (приложение 1).
+
+Дополнительно сообщаем, что в отчёт внесены уточнения по методике расчёта, согласованные с Департаментом финансовой стабильности 20.11.2025.
+
+При возникновении вопросов просим связаться с ответственным лицом: Петров И.В., тел. +7 (495) XXX-XX-XX, petrov@bank.ru.
+
+С уважением,
+ФИО
+Руководитель Отдела отчётности
+АО «Банк»</textarea>
+
+            <div class="actions">
+              <button class="btn btn--primary">✅ Отправить</button>
+              <button class="btn btn--secondary">🔄 Перегенерировать</button>
+              <button class="btn btn--warning">🖨️ На согласование</button>
+              <button class="btn btn--danger">🗑️ Отклонить</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">🔄 Согласование (3 этапа)</div>
+          <div class="panel-body">
+            <div class="approval-steps">
+              <div class="approval-step done">
+                <div class="step-title">Юридический отдел</div>
+                <div class="step-status">✅ Одобрено — 10:15, 28.11.2025</div>
+                <div class="step-comment">«Формулировки соответствуют Указанию №5834-У. Рекомендую добавить ссылку на письмо-согласование от 20.11».</div>
+              </div>
+              <div class="approval-step active">
+                <div class="step-title">Департамент регуляторного взаимодействия</div>
+                <div class="step-status">⏳ На проверке — до 15:00</div>
+              </div>
+              <div class="approval-step waiting">
+                <div class="step-title">Руководитель направления</div>
+                <div class="step-status">⏳ Ожидает</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Минимум JS для интерактива (стили ответа)
+    document.querySelectorAll('.style-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Здесь в будущем — вызов API для генерации под стиль
+      });
+    });
+  </script>
+</body>
+</html>

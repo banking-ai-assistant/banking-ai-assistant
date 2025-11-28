@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: ИИ-ассистент «Корреспондент» — API
+  version: 1.0.0
+  description: |
+    API для сквозной автоматизации обработки деловой корреспонденции в банке.
+    Соответствует ТЗ «AI CHALLENGE: BANKING / Задача 02».
+
+servers:
+  - url: http://localhost:8000/api
+    description: Локальная разработка
+  - url: https://api.correspondent.bank/v1  
+    description: Продакшн (Yandex Cloud)
+
+tags:
+  - name: inbox
+    description: Входящая корреспонденция
+  - name: generation
+    description: Генерация ответов
+  - name: approval
+    description: Согласование
+  - name: metrics
+    description: Аналитика и уведомления
+
+paths:
+  /inbox:
+    get:
+      tags: [inbox]
+      summary: Получить список входящих писем
+      responses:
+        '200':
+          description: Список писем
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /generate:
+    post:
+      tags: [generation]
+      summary: Сгенерировать черновик ответа
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                letterId:
+                  type: integer
+                  example: 101
+                style:
+                  type: string
+                  enum: [formal, corporate, client, brief]
+                  example: formal
+              required: [letterId, style]
+      responses:
+        '200':
+          description: Черновик успешно сгенерирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  draft:
+                    type: string
+                    example: "Уважаемые сотрудники ЦБ РФ..."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /approval/{letterId}:
+    get:
+      tags: [approval]
+      summary: Получить маршрут согласования для письма
+      parameters:
+        - name: letterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Маршрут согласования
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalStep'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /approve:
+    post:
+      tags: [approval]
+      summary: Отправить письмо на согласование
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                letterId:
+                  type: integer
+                comment:
+                  type: string
+                  nullable: true
+              required: [letterId]
+      responses:
+        '202':
+          description: Принято в обработку
+
+  /send:
+    post:
+      tags: [generation]
+      summary: Отправить ответ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                letterId:
+                  type: integer
+                draft:
+                  type: string
+                style:
+                  type: string
+                  enum: [formal, corporate, client, brief]
+              required: [letterId, draft]
+      responses:
+        '200':
+          description: Отправлено
+
+  /reject:
+    post:
+      tags: [inbox]
+      summary: Отклонить письмо (не требует ответа)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                letterId:
+                  type: integer
+              required: [letterId]
+      responses:
+        '200':
+          description: Отклонено
+
+  /metrics:
+    get:
+      tags: [metrics]
+      summary: Получить ключевые метрики
+      responses:
+        '200':
+          description: Метрики эффективности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+
+  /alerts:
+    get:
+      tags: [metrics]
+      summary: Получить активные уведомления
+      responses:
+        '200':
+          description: Список алертов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+
+components:
+  schemas:
+    Letter:
+      type: object
+      properties:
+        id:
+          type: integer
+        sender:
+          type: string
+          example: "ЦБ РФ"
+        subject:
+          type: string
+        preview:
+          type: string
+        type:
+          type: string
+          enum: [regulatory, complaint, info, partner, proposal, notification]
+        sla:
+          type: string
+          enum: [high, medium, low]
+        deadline:
+          type: string
+          format: date-time
+          example: "2025-11-28T15:00:00Z"
+        status:
+          type: string
+          enum: [new, draft, on_approval, approved, sent, rejected]
+      required: [id, sender, subject, type, sla, deadline, status]
+
+    ApprovalStep:
+      type: object
+      properties:
+        id:
+          type: string
+        department:
+          type: string
+        approver:
+          type: string
+        status:
+          type: string
+          enum: [waiting, active, done]
+        comment:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, department, approver, status]
+
+    Metrics:
+      type: object
+      properties:
+        slaCompliance:
+          type: number
+          format: float
+          example: 84.5
+        avgResponseTimeHours:
+          type: number
+          format: float
+          example: 2.1
+        onApproval:
+          type: integer
+        overdue:
+          type: integer
+      required: [slaCompliance, avgResponseTimeHours, onApproval, overdue]
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [deadline, approval, ready, escalation]
+        text:
+          type: string
+        letterId:
+          type: integer
+      required: [id, type, text, letterId]
+
+  responses:
+    Unauthorized:
+      description: Токен отсутствует или недействителен
+    BadRequest:
+      description: Некорректный запрос (например, неизвестный style)
+    NotFound:
+      description: Письмо не найдено
+
